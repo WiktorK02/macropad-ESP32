@@ -6,8 +6,9 @@
 ## What is done
  - Sending MQTT messages.
  - Managing WiFi and MQTT setup and saving them to a JSON file.
+ - Pull up resistors with switches have been checked.
 ## Task list
- - Testing pull-up resistors with switches.
+ - <del>Testing pull-up resistors with switches.<del>
  - Debugging the issue with saving WiFi and MQTT settings during reset.
 ## How to Contribute
 1. Fork the Project
