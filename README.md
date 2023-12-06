@@ -14,6 +14,8 @@
 ## Task list
  - <del>Testing pull-up resistors with switches.<del>
  - Debugging the issue with saving WiFi and MQTT settings during reset.
+ - Final test with every componet
+ - Buy PCB
 ## How to Contribute
 1. Fork the Project
 2. Clone repo with your GitHub username instead of ```YOUR-USERNAME```:<br>
