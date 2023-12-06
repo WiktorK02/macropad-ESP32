@@ -2,7 +2,11 @@
 ## PCB design 
 ![](https://github.com/WiktorK02/macropad-ESP32/assets/123249470/5bded6bd-c70d-425e-8246-885c9c012832)
 ![](https://github.com/WiktorK02/macropad-ESP32/assets/123249470/cac6983b-8be3-43c5-9341-99c6b382dec0)
-
+## Components 
+ - ESP32
+ - Cherry MX Red switches
+ - 10k resistors
+ - Encoder 3.3V
 ## What is done
  - Sending MQTT messages.
  - Managing WiFi and MQTT setup and saving them to a JSON file.
