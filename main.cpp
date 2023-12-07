@@ -1,3 +1,5 @@
+
+
 #include <BfButton.h>
 #include <Bounce2.h>
 #include <WiFiManager.h>
@@ -19,17 +21,25 @@ int aLastState;
 
 const char* settingsFile = "/config.json";
 
-const int buttonPin = 32; 
+const int switchPin = 34; 
+const int switchPin2 = 35; 
 Bounce debouncer = Bounce(); 
+Bounce debouncer2 = Bounce();
+
+bool isSwitch1On = false;
+bool isSwitch2On = false;
+
 WiFiManager wm;
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
 const char *mqtt_topic = "con/ok";
 const char *mqtt_topic_read = "analog/read";
 const char* mqtt_button_topic = "button/click";
+const char* mqtt_switch1_topic = "switch/click/1";
+const char* mqtt_switch2_topic = "switch/click/2";
 const unsigned long RECONNECT_DELAY = 5000;
 
-WiFiManagerParameter mqttServer("mqtt_server", "MQTT Server", "0.0.0.24", 40);
+WiFiManagerParameter mqttServer("mqtt_server", "MQTT Server", "192.168.0.23", 40);
 WiFiManagerParameter mqttPort("mqtt_port", "MQTT Port", "1883", 6);
 WiFiManagerParameter mqttUser("mqtt_user", "MQTT User", "admin", 20);
 WiFiManagerParameter mqttPassword("mqtt_password", "MQTT Password", "admin", 20);
@@ -132,9 +142,12 @@ void setup() {
       .onPressFor(pressHandler, 1000); 
 
   //wm.resetSettings();
-  pinMode(buttonPin, INPUT_PULLUP);
-  debouncer.attach(buttonPin);
-  debouncer.interval(50);
+  pinMode(switchPin, INPUT_PULLUP); 
+  debouncer.attach(switchPin);
+  pinMode(switchPin2, INPUT_PULLUP); 
+  debouncer2.attach(switchPin2);
+  debouncer2.interval(50);
+  debouncer.interval(50); 
   Serial.begin(115200);
 
     wm.addParameter(&mqttServer);
@@ -173,14 +186,30 @@ void setup() {
 void loop() {
 
     debouncer.update();
-    if (debouncer.fell()) {
-        Serial.println("Button pressed!");
-        saveSettingsToJson(); // Save settings to JSON before restarting
-        wm.resetSettings();
-        delay(1000);
-    }
-
     mqttClient.loop();
+  debouncer2.update();
+  
+  if (debouncer.fell()) {
+    isSwitch1On = !isSwitch1On;
+
+    if (isSwitch1On) {
+      Serial.println("Switch 1 is ON");
+    } else {
+      Serial.println("Switch 1 is OFF");
+    }
+    mqttClient.publish(mqtt_switch1_topic, "true");
+  }
+
+  if (debouncer2.fell()) {
+    isSwitch2On = !isSwitch2On;
+
+    if (isSwitch2On) {
+      Serial.println("Switch 2 is ON");
+    } else {
+      Serial.println("Switch 2 is OFF");
+    }
+    mqttClient.publish(mqtt_switch2_topic, "true");
+  }
     
     btn.read();
     int clkState = digitalRead(CLK);
@@ -206,5 +235,3 @@ void loop() {
 
     aLastState = clkState;
 }
-
-
