@@ -11,11 +11,14 @@
  - Sending MQTT messages.
  - Managing WiFi and MQTT setup and saving them to a JSON file.
  - Pull up resistors with switches have been checked.
+ - Proper saving settings to JSON
+ - More stable
 ## Task list
  - <del>Testing pull-up resistors with switches.<del>
  - Debugging the issue with saving WiFi and MQTT settings during reset.
  - Final test with every componet
  - Buy PCB
+ - Reset settings button
 ## How to Contribute
 1. Fork the Project
 2. Clone repo with your GitHub username instead of ```YOUR-USERNAME```:<br>
