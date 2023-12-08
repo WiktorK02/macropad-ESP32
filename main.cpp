@@ -6,10 +6,9 @@
 #include <FS.h>
 #include <SPIFFS.h>
 
-
-int btnPin = 27;        
-int DT = 26;           
-int CLK = 25;           
+int btnPin = 27;
+int DT = 26;
+int CLK = 25;
 BfButton btn(BfButton::STANDALONE_DIGITAL, btnPin, true, LOW);
 int counter = 0;
 int angle = 0;
@@ -19,9 +18,9 @@ int aLastState;
 
 const char* settingsFile = "/config.json";
 
-const int switchPin = 34; 
-const int switchPin2 = 35; 
-Bounce debouncer = Bounce(); 
+const int switchPin = 12;
+const int switchPin2 = 14;
+Bounce debouncer = Bounce();
 Bounce debouncer2 = Bounce();
 
 bool isSwitch1On = false;
@@ -41,6 +40,7 @@ WiFiManagerParameter mqttServer("mqtt_server", "MQTT Server", "", 40);
 WiFiManagerParameter mqttPort("mqtt_port", "MQTT Port", "", 6);
 WiFiManagerParameter mqttUser("mqtt_user", "MQTT User", "", 20);
 WiFiManagerParameter mqttPassword("mqtt_password", "MQTT Password", "", 20);
+
 void saveSettingsToJson() {
   DynamicJsonDocument doc(1024);
 
@@ -115,7 +115,6 @@ void connectToMQTT() {
 
   if (mqttClient.connect("ESP8266Client", mqttUser.getValue(), mqttPassword.getValue())) {
     Serial.println("Connected to MQTT");
-    mqttClient.loop();
     mqttClient.publish(mqtt_topic, "222222");
   } else {
     Serial.print("Failed to connect to MQTT, rc=");
@@ -123,69 +122,60 @@ void connectToMQTT() {
   }
 }
 
-
 void pressHandler(BfButton *btn, BfButton::press_pattern_t pattern) {
   switch (pattern) {
-  case BfButton::SINGLE_PRESS:
-    Serial.println("Single push");
-    mqttClient.publish(mqtt_button_topic, "single_press");
-    break;
+    case BfButton::SINGLE_PRESS:
+      Serial.println("Single push");
+      mqttClient.publish(mqtt_button_topic, "single_press");
+      break;
 
-  case BfButton::DOUBLE_PRESS:
-    Serial.println("Double push");
-    break;
+    case BfButton::DOUBLE_PRESS:
+      Serial.println("Double push");
+      wm.resetSettings();
+      break;
 
-  case BfButton::LONG_PRESS:
-    Serial.println("Long push");
-    break;
+    case BfButton::LONG_PRESS:
+      Serial.println("Long push");
+      break;
   }
 }
 
 void setup() {
+  Serial.begin(115200);
+  delay(1000); // Delay for serial monitor connection
+
   if (!SPIFFS.begin(true)) {
     Serial.println("Failed to mount file system");
-
     return;
   }
-  Serial.println(angle);
+
   pinMode(CLK, INPUT_PULLUP);
   pinMode(DT, INPUT_PULLUP);
   aLastState = digitalRead(CLK);
 
   btn.onPress(pressHandler)
-      .onDoublePress(pressHandler) 
-      .onPressFor(pressHandler, 1000); 
+     .onDoublePress(pressHandler)
+     .onPressFor(pressHandler, 1000);
 
-  // wm.resetSettings();
-  pinMode(switchPin, INPUT_PULLUP); 
+  pinMode(switchPin, INPUT_PULLUP);
   debouncer.attach(switchPin);
-  pinMode(switchPin2, INPUT_PULLUP); 
+  pinMode(switchPin2, INPUT_PULLUP);
   debouncer2.attach(switchPin2);
   debouncer2.interval(50);
-  debouncer.interval(50); 
-  Serial.begin(115200);
+  debouncer.interval(50);
 
   wm.addParameter(&mqttServer);
   wm.addParameter(&mqttPort);
   wm.addParameter(&mqttUser);
   wm.addParameter(&mqttPassword);
   wm.setMinimumSignalQuality();
-
   wm.setConnectTimeout(180);
-
   wm.setTimeout(180);
 
-    //if (digitalRead(btnPin) == LOW) {
-    //Serial.println("Resetting WiFi settings...");
-    //wm.resetSettings();
-  //}
-
-  // Attempt to autoconnect to WiFi
   bool res = wm.autoConnect("MacroPad", "password");
 
   if (!res) {
     Serial.println("Failed to autoconnect. Retrying...");
-
   } else {
     Serial.println("Connected to WiFi");
     saveSettingsToJson();
@@ -197,7 +187,6 @@ void setup() {
   if (!mqttServer.getValue() || !mqttPort.getValue() || !mqttUser.getValue() || !mqttPassword.getValue()) {
     Serial.println("MQTT settings are missing. Please configure them through the captive portal.");
   } else {
-
     while (WiFi.status() != WL_CONNECTED) {
       delay(500);
       Serial.print(".");
@@ -205,18 +194,26 @@ void setup() {
 
     if (!mqttClient.connected()) {
       Serial.println("MQTT not connected. Attempting to reconnect...");
-      delay(RECONNECT_DELAY); 
+      delay(RECONNECT_DELAY);
       connectToMQTT();
     }
   }
 }
 
 void loop() {
+  btn.read(); // Read button state
 
-    debouncer.update();
-    mqttClient.loop();
+  // Check and reconnect MQTT
+  if (!mqttClient.connected()) {
+    Serial.println("MQTT not connected. Attempting to reconnect...");
+    delay(RECONNECT_DELAY);
+    connectToMQTT();
+  }
+
+  debouncer.update();
+  mqttClient.loop();
   debouncer2.update();
-  
+
   if (debouncer.fell()) {
     isSwitch1On = !isSwitch1On;
 
@@ -238,28 +235,27 @@ void loop() {
     }
     mqttClient.publish(mqtt_switch2_topic, "true");
   }
-    
-    btn.read();
-    int clkState = digitalRead(CLK);
-    int dtState = digitalRead(DT);
-  
-    if (clkState != aLastState) {
-        if (clkState == HIGH) {
-            if (dtState == LOW) {
-                angle = 5;
-            } else {
-                angle = -5;
-            }
 
-            Serial.println(angle);
+  int clkState = digitalRead(CLK);
+  int dtState = digitalRead(DT);
 
-            char angleStr[10];
-            itoa(angle, angleStr, 10);
-            mqttClient.publish(mqtt_topic_read, angleStr);
-            lastAngle = angle;
-            Serial.println(angle);
-        }
+  if (clkState != aLastState) {
+    if (clkState == HIGH) {
+      if (dtState == LOW) {
+        angle = 5;
+      } else {
+        angle = -5;
+      }
+
+      Serial.println(angle);
+
+      char angleStr[10];
+      itoa(angle, angleStr, 10);
+      mqttClient.publish(mqtt_topic_read, angleStr);
+      lastAngle = angle;
+      Serial.println(angle);
     }
+  }
 
-    aLastState = clkState;
+  aLastState = clkState;
 }
