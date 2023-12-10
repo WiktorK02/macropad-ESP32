@@ -6,9 +6,9 @@
 #include <FS.h>
 #include <SPIFFS.h>
 
-int btnPin = 27;
+int btnPin = 25;
 int DT = 26;
-int CLK = 25;
+int CLK = 27;
 BfButton btn(BfButton::STANDALONE_DIGITAL, btnPin, true, LOW);
 int counter = 0;
 int angle = 0;
@@ -40,6 +40,11 @@ WiFiManagerParameter mqttServer("mqtt_server", "MQTT Server", "", 40);
 WiFiManagerParameter mqttPort("mqtt_port", "MQTT Port", "", 6);
 WiFiManagerParameter mqttUser("mqtt_user", "MQTT User", "", 20);
 WiFiManagerParameter mqttPassword("mqtt_password", "MQTT Password", "", 20);
+
+// Add a global variable to count failed MQTT connection attempts
+int mqttConnectionAttempts = 0;
+const int MAX_MQTT_CONNECTION_ATTEMPTS = 3;
+
 
 void saveSettingsToJson() {
   DynamicJsonDocument doc(1024);
@@ -115,13 +120,24 @@ void connectToMQTT() {
 
   if (mqttClient.connect("ESP8266Client", mqttUser.getValue(), mqttPassword.getValue())) {
     Serial.println("Connected to MQTT");
+    mqttConnectionAttempts = 0;  // Reset the counter on successful connection
     mqttClient.publish(mqtt_topic, "222222");
   } else {
     Serial.print("Failed to connect to MQTT, rc=");
     Serial.println(mqttClient.state());
+    
+    // Increment the counter on failed connection attempts
+    mqttConnectionAttempts++;
+
+    // If the maximum attempts are reached, reset AP settings and restart
+    if (mqttConnectionAttempts >= MAX_MQTT_CONNECTION_ATTEMPTS) {
+      Serial.println("Resetting AP settings and restarting...");
+      SPIFFS.format(); // Clear the file system
+      wm.resetSettings(); // Reset WiFiManager settings
+      ESP.restart(); // Restart the ESP
+    }
   }
 }
-
 void pressHandler(BfButton *btn, BfButton::press_pattern_t pattern) {
   switch (pattern) {
     case BfButton::SINGLE_PRESS:
@@ -131,7 +147,9 @@ void pressHandler(BfButton *btn, BfButton::press_pattern_t pattern) {
 
     case BfButton::DOUBLE_PRESS:
       Serial.println("Double push");
-      wm.resetSettings();
+      SPIFFS.format(); // Clear the file system
+      wm.resetSettings(); // Reset WiFiManager settings
+      ESP.restart(); // Restart the ESP
       break;
 
     case BfButton::LONG_PRESS:
