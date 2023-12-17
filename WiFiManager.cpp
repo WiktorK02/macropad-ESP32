@@ -337,7 +337,7 @@ boolean WiFiManager::autoConnect(char const *apName, char const *apPassword) {
     // @todo check if correct ssid == saved ssid when already connected
     bool connected = false;
     int AttemptsWiFi = 0;
-    int MaxAttemptsWiFi = 10;
+    int MaxAttemptsWiFi = 5;
     while(MaxAttemptsWiFi > AttemptsWiFi){
     
 	    if (WiFi.status() == WL_CONNECTED){
@@ -1138,7 +1138,6 @@ bool WiFiManager::wifiConnectDefault(){
   #endif
 
   ret = WiFi_enableSTA(true,storeSTAmode);
-  delay(500); // THIS DELAY ?
 
   #ifdef WM_DEBUG_LEVEL
   DEBUG_WM(DEBUG_DEV,F("Mode after delay: "),getModeString(WiFi.getMode()));
